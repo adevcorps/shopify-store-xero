@@ -1,4 +1,4 @@
-// require('dotenv').config();
+require('dotenv').config();
 const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
