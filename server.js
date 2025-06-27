@@ -8,7 +8,7 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let inventoryLogs = []; 
+let inventoryLogs = [];
 app.use('/webhook/inventory', bodyParser.raw({ type: 'application/json' }));
 
 app.get('/', (req, res) => {
@@ -63,6 +63,9 @@ app.post('/webhook/inventory', (req, res) => {
 
 // 📡 Register webhook with Shopify
 async function registerWebhook() {
+  console.log('🔧 Store Domain:', process.env.SHOPIFY_STORE_DOMAIN);
+  console.log('🔧 Access Token:', process.env.SHOPIFY_ACCESS_TOKEN);
+
   const endpoint = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2024-04/webhooks.json`;
 
   try {
