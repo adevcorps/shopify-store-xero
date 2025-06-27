@@ -74,6 +74,11 @@ async function ensureWebhookRegistered() {
   const topic = "inventory_levels/update";
   const address = `${SHOPIFY_APP_SERVER}/webhook/inventory`;
 
+  console.log(storeDomain);
+  console.log(accessToken);
+  console.log(topic);
+  console.log(address);
+
   try {
     // 1. Get existing webhooks
     const existing = await axios.get(`https://${storeDomain}/admin/api/2024-04/webhooks.json`, {
