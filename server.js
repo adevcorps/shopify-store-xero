@@ -1,4 +1,9 @@
-// require('dotenv').config();
+require('dotenv').config();
+const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
+const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
+const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
+const SHOPIFY_APP_SERVER = process.env.SHOPIFY_APP_SERVER;
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -41,7 +46,7 @@ function verifyHmac(rawBody, hmacHeader, secret) {
 // 📬 Webhook receiver
 app.post('/webhook/inventory', (req, res) => {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  const isVerified = verifyHmac(req.body, hmacHeader, process.env.SHOPIFY_API_SECRET);
+  const isVerified = verifyHmac(req.body, hmacHeader, SHOPIFY_API_SECRET);
 
   if (!isVerified) {
     return res.status(401).send('Unauthorized');
@@ -62,37 +67,53 @@ app.post('/webhook/inventory', (req, res) => {
 });
 
 // 📡 Register webhook with Shopify
-async function registerWebhook() {
-  console.log('🔧 Store Domain:', process.env.SHOPIFY_STORE_DOMAIN);
-  console.log('🔧 Access Token:', process.env.SHOPIFY_ACCESS_TOKEN);
 
-  const endpoint = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2024-04/webhooks.json`;
+async function ensureWebhookRegistered() {
+  const storeDomain = SHOPIFY_STORE_DOMAIN;
+  const accessToken = SHOPIFY_ACCESS_TOKEN;
+  const topic = "inventory_levels/update";
+  const address = `${SHOPIFY_APP_SERVER}/webhook/inventory`;
 
   try {
-    const response = await axios.post(
-      endpoint,
-      {
-        webhook: {
-          topic: 'inventory_levels/update',
-          address: `${process.env.SHOPIFY_APP_SERVER}/webhook/inventory`,
-          format: 'json'
-        }
-      },
-      {
-        headers: {
-          'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
-          'Content-Type': 'application/json'
-        }
+    // 1. Get existing webhooks
+    const existing = await axios.get(`https://${storeDomain}/admin/api/2024-04/webhooks.json`, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+        "Content-Type": "application/json"
       }
+    });
+
+    // 2. Check if our webhook already exists
+    const alreadyExists = existing.data.webhooks.some(
+      (w) => w.address === address && w.topic === topic
     );
 
-    console.log('✅ Webhook registered:', response.data);
+    if (alreadyExists) {
+      console.log("✅ Webhook already registered.");
+      return;
+    }
+
+    // 3. Register only if not found
+    const res = await axios.post(`https://${storeDomain}/admin/api/2024-04/webhooks.json`, {
+      webhook: {
+        topic,
+        address,
+        format: "json"
+      }
+    }, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+        "Content-Type": "application/json"
+      }
+    });
+
+    console.log("✅ Webhook registered:", res.data);
   } catch (error) {
-    console.error('❌ Error registering webhook:', error.response?.data || error.message);
+    console.error("❌ Error ensuring webhook:", error.response?.data || error.message);
   }
-}
+};
 
 app.listen(PORT, async () => {
   console.log(`🚀 App running on port ${PORT}`);
-  await registerWebhook();
+  await ensureWebhookRegistered();
 });
